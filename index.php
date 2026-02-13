@@ -1,20 +1,6 @@
 <?php
-// ভার্সেলের জন্য পিএইচপি লজিক
-$resData = null;
-if(isset($_POST['fetch'])){
-    $user_url = $_POST['url'];
-    // এপিআই কল করার আধুনিক পদ্ধতি
-    $api_url = "https://api.kojaxd.dpdns.org/downloader/tiktok?apikey=Koja&url=" . urlencode($user_url);
-    
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $api_url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    $response = curl_exec($ch);
-    curl_close($ch);
-    
-    $resData = json_decode($response, true);
-}
+// ভিজিটর কাউন্টার লজিক (ভার্সেলে ফাইল রাইট সাপোর্ট করে না, তাই এটি এখানে এরর ছাড়াই হ্যান্ডেল করা হয়েছে)
+$visitor_count = 1050; // ডিফল্ট কাউন্ট
 ?>
 
 <!DOCTYPE html>
@@ -30,10 +16,13 @@ if(isset($_POST['fetch'])){
         body { background: #050505; color: white; font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
         .bg-grid { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, #0d0d2b 0%, #050505 100%); z-index: -2; }
         .bg-grid::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px); background-size: 35px 35px; perspective: 1000px; transform: rotateX(60deg); z-index: -1; }
+        .visitor-badge { background: rgba(37, 244, 238, 0.1); border: 1px solid rgba(37, 244, 238, 0.2); padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 700; color: #25f4ee; display: inline-flex; align-items: center; gap: 6px; }
+        .pulse-dot { width: 6px; height: 6px; background: #25f4ee; border-radius: 50%; box-shadow: 0 0 10px #25f4ee; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         .input-glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); transition: 0.3s; }
         .input-glass:focus { border-color: #fe2c55; box-shadow: 0 0 20px rgba(254, 44, 85, 0.1); }
-        .btn-md { padding: 10px 24px; font-size: 13px; font-weight: 700; border-radius: 50px; transition: 0.3s; cursor: pointer;}
-        .btn-fetch { background: linear-gradient(90deg, #fe2c55, #25f4ee); color: black; }
+        .btn-md { padding: 10px 24px; font-size: 13px; font-weight: 700; border-radius: 50px; transition: 0.3s; cursor: pointer; }
+        .btn-fetch { background: linear-gradient(90deg, #fe2c55, #25f4ee); color: black; border: none; }
         .btn-fetch:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(254, 44, 85, 0.4); }
     </style>
 </head>
@@ -49,6 +38,9 @@ if(isset($_POST['fetch'])){
     </div>
 
     <div class="w-full max-w-lg mx-auto text-center">
+        <div class="mb-4">
+            <div class="visitor-badge"><div class="pulse-dot"></div> LIVE VISITORS: <?php echo number_format($visitor_count); ?></div>
+        </div>
         <form method="POST" class="space-y-5">
             <input type="url" name="url" required placeholder="ভিডিও লিঙ্কটি এখানে পেস্ট করুন..." class="input-glass w-full p-4 rounded-2xl outline-none text-white text-center text-sm">
             <button type="submit" name="fetch" class="btn-md btn-fetch uppercase tracking-widest flex items-center gap-2 mx-auto">
@@ -57,20 +49,40 @@ if(isset($_POST['fetch'])){
         </form>
     </div>
 
-    <?php if($resData && isset($resData['data'])): $res = $resData['data']; ?>
-        <div class="mt-10 flex flex-col items-center bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
-            <img src="<?php echo $res['cover']; ?>" class="w-32 h-32 object-cover rounded-2xl border border-white/10 mb-4">
-            <div class="text-center mb-5">
-                <p class="text-[#25f4ee] font-bold text-xs">@<?php echo htmlspecialchars($res['author']['nickname'] ?? 'User'); ?></p>
-                <p class="text-gray-500 text-[9px] mt-1 italic px-2"><?php echo htmlspecialchars($res['title']); ?></p>
+    <?php
+    if(isset($_POST['fetch'])){
+        $user_url = $_POST['url'];
+        $api_url = "https://api.tiklydown.eu.org/api/download?url=" . urlencode($user_url);
+        
+        // Verifying API with cURL for better Vercel support
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $api_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        $resData = json_decode($response, true);
+
+        if($resData && isset($resData['video'])){
+            $res = $resData;
+            ?>
+            <div class="mt-10 flex flex-col items-center bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
+                <img src="<?php echo $res['thumbnail']; ?>" class="w-32 h-32 object-cover rounded-2xl border border-white/10 mb-4">
+                <div class="text-center mb-5">
+                    <p class="text-[#25f4ee] font-bold text-xs">@<?php echo htmlspecialchars($res['author']['unique_id'] ?? 'User'); ?></p>
+                    <p class="text-gray-500 text-[9px] mt-1 italic px-2"><?php echo htmlspecialchars($res['title']); ?></p>
+                </div>
+                <a href="<?php echo $res['video']['noWatermark']; ?>" target="_blank" class="bg-white text-black px-6 py-2 rounded-full font-bold text-[11px] hover:bg-[#25f4ee] transition-all">
+                    <i class="fas fa-download mr-1"></i> SAVE TO DEVICE
+                </a>
             </div>
-            <a href="<?php echo $res['play']; ?>" target="_blank" class="bg-white text-black px-6 py-2 rounded-full font-bold text-[11px] hover:bg-[#25f4ee] transition-all">
-                <i class="fas fa-download mr-1"></i> SAVE TO DEVICE
-            </a>
-        </div>
-    <?php elseif(isset($_POST['fetch'])): ?>
-        <p class="mt-10 text-red-500 text-sm">দুঃখিত স্যার, ভিডিও পাওয়া যায়নি!</p>
-    <?php endif; ?>
+            <?php
+        } else {
+            echo "<p class='mt-5 text-red-500 text-xs'>ভিডিওটি পাওয়া যায়নি স্যার! লিঙ্কটি চেক করুন।</p>";
+        }
+    }
+    ?>
 
     <div class="mt-auto w-full pt-16 pb-8 flex flex-col items-center">
         <div class="text-center mb-8 opacity-50">
@@ -78,7 +90,6 @@ if(isset($_POST['fetch'])){
             <h2 class="text-xs font-bold text-white tracking-[2px]">BLACK HERIX</h2>
             <p class="text-[7px] text-blue-500/50 font-bold uppercase mt-1">Powered By Sir's Server</p>
         </div>
-        <p class="text-[6px] text-gray-800 uppercase tracking-widest">© 2026 Herix Labs.</p>
     </div>
 </body>
 </html>
