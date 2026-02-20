@@ -1,116 +1,178 @@
 const express = require('express');
 const axios = require('axios');
+const bodyParser = require('body-parser');
+const path = require('path');
+
 const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// কনফিগারেশন - এগুলো Vercel Dashboard থেকে সেট করবে
+const API_KEY = process.env.API_KEY || "Db99b6ad61a43f115ddee06c7d716467";
+const API_URL = "https://smmnea.com/api/v2";
+const SERVICE_ID = "12394"; // আপডেট করা হয়েছে
+const QUANTITY = 1500; // আপডেট করা হয়েছে
 
 app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="bn">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>TikTok Downloader | Pro</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-                body { background: #050505; color: white; font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
-                .bg-grid { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, #0d0d2b 0%, #050505 100%); z-index: -2; }
-                .bg-grid::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px); background-size: 35px 35px; perspective: 1000px; transform: rotateX(60deg); z-index: -1; }
-                .visitor-badge { background: rgba(37, 244, 238, 0.1); border: 1px solid rgba(37, 244, 238, 0.2); padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 700; color: #25f4ee; display: inline-flex; align-items: center; gap: 6px; }
-                .pulse-dot { width: 6px; height: 6px; background: #25f4ee; border-radius: 50%; box-shadow: 0 0 10px #25f4ee; animation: pulse 1.5s infinite; }
-                @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-                .input-glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); transition: 0.3s; }
-                .btn-fetch { background: linear-gradient(90deg, #fe2c55, #25f4ee); color: black; padding: 10px 24px; font-size: 13px; font-weight: 700; border-radius: 50px; }
-                .neon-text { text-shadow: 0 0 10px rgba(254, 44, 85, 0.3); }
-            </style>
-        </head>
-        <body class="p-4">
-            <div class="bg-grid"></div>
-
-            <div class="text-center mt-16 mb-8">
-                <div class="mb-3 text-3xl opacity-80 animate-bounce"><i class="fab fa-tiktok"></i></div>
-                <h1 class="text-4xl sm:text-5xl font-black tracking-tight neon-text">
-                    TikTok <span class="text-[#fe2c55]">Downloader</span>
-                </h1>
-                <div class="mt-3 flex justify-center gap-2 text-[8px] font-bold uppercase tracking-[2px] text-gray-500 opacity-80">
-                    <span>No Watermark</span> • <span>No Copyright</span> • <span>Fast & Free</span>
-                </div>
-            </div>
-
-            <div class="w-full max-w-lg mx-auto text-center">
-                <div class="mb-4">
-                    <div class="visitor-badge">
-                        <div class="pulse-dot"></div>
-                        LIVE VISITORS: <span id="vCount">1,024</span>
-                    </div>
-                </div>
-
-                <div class="space-y-5">
-                    <input type="url" id="vUrl" placeholder="ভিডিও লিঙ্কটি এখানে পেস্ট করুন..." 
-                        class="input-glass w-full p-4 rounded-2xl outline-none text-white text-center text-sm">
-                    <button onclick="dl()" class="btn-fetch uppercase tracking-widest flex items-center gap-2 mx-auto">
-                        <i class="fas fa-bolt text-[10px]"></i> Get Video
-                    </button>
-                </div>
-
-                <div id="res" class="mt-10"></div>
-            </div>
-
-            <div class="mt-auto w-full pt-16 pb-8 flex flex-col items-center">
-                <div class="text-center mb-8 opacity-50">
-                    <p class="text-[7px] uppercase tracking-[3px] mb-1">Architected By</p>
-                    <h2 class="text-xs font-bold text-white tracking-[2px]">BLACK HERIX</h2>
-                    <p class="text-[7px] text-blue-500/50 font-bold uppercase mt-1">Powered By Mirjapur Cyber Venom</p>
-                </div>
-                <a href="https://t.me/+iA3sqCtLYtU2ZGY1" target="_blank" class="flex items-center gap-2 text-gray-500 hover:text-white transition-all">
-                    <div class="bg-blue-600/10 p-2 rounded-lg border border-blue-600/20"><i class="fab fa-telegram-plane text-blue-400"></i></div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest">Join Official Channel</span>
-                </a>
-                <p class="mt-6 text-[6px] text-gray-800 uppercase tracking-widest">© 2026 Herix Labs. All rights reserved.</p>
-            </div>
-
-            <script>
-                // লাইভ ভিজিটর ফেক কাউন্টার লজিক
-                setInterval(() => {
-                    const el = document.getElementById('vCount');
-                    let count = parseInt(el.innerText.replace(',', ''));
-                    el.innerText = (count + Math.floor(Math.random() * 3)).toLocaleString();
-                }, 3000);
-
-                async function dl() {
-                    const u = document.getElementById('vUrl').value;
-                    const r = document.getElementById('res');
-                    if(!u) return;
-                    r.innerHTML = '<p class="animate-pulse text-gray-400">Processing...</p>';
-                    try {
-                        const response = await fetch('/api/download?url=' + encodeURIComponent(u));
-                        const d = await response.json();
-                        const data = d.data;
-                        r.innerHTML = \`
-                            <div class="flex flex-col items-center bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
-                                <img src="\${data.cover}" class="w-32 h-32 object-cover rounded-2xl border border-white/10 mb-4">
-                                <div class="text-center mb-5">
-                                    <p class="text-[#25f4ee] font-bold text-xs">@\${data.author.nickname}</p>
-                                    <p class="text-gray-500 text-[9px] mt-1 italic px-2">\${data.title}</p>
-                                </div>
-                                <a href="\${data.play}" target="_blank" class="bg-white text-black px-6 py-2 rounded-full font-bold text-[11px] hover:bg-[#25f4ee] transition-all">
-                                    <i class="fas fa-download mr-1"></i> SAVE TO DEVICE
-                                </a>
-                            </div>\`;
-                    } catch (e) { r.innerHTML = '<p class="text-red-500">Error Fetching Video!</p>'; }
-                }
-            </script>
-        </body>
-        </html>
-    `);
+    res.send(renderHTML(""));
 });
 
-app.get('/api/download', async (req, res) => {
+app.post('/', async (req, res) => {
+    const link = req.body.tiktok_link;
+    let message = "";
+
     try {
-        const response = await axios.get('https://api.kojaxd.dpdns.org/downloader/tiktok?apikey=Koja&url=' + encodeURIComponent(req.query.url));
-        res.json(response.data);
-    } catch (e) { res.status(500).json({error: true}); }
+        const response = await axios.post(API_URL, new URLSearchParams({
+            key: API_KEY,
+            action: 'add',
+            service: SERVICE_ID,
+            link: link,
+            quantity: QUANTITY
+        }));
+
+        if (response.data && response.data.order) {
+            message = `<p style='color: #00f2ea; font-weight:bold;'>অর্ডার সফল হয়েছে! আইডি: ${response.data.order}</p>`;
+        } else {
+            message = `<p style='color: #ff0050; font-weight:bold;'>অর্ডার ব্যর্থ হয়েছে! আবার চেষ্টা করুন।</p>`;
+        }
+    } catch (error) {
+        message = `<p style='color: #ff0050; font-weight:bold;'>সার্ভার ত্রুটি! পরে চেষ্টা করুন।</p>`;
+    }
+
+    res.send(renderHTML(message));
 });
 
-module.exports = app;
+function renderHTML(message) {
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>TikTok Free Views - Black Herix</title>
+        <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { background-color: #010101; color: white; font-family: 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+            .header { padding: 15px; text-align: center; border-bottom: 1px solid #222; background: #010101; width: 100%; }
+            .dev-info { color: #fe2c55; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+            .wrapper { width: 100%; max-width: 420px; margin: 20px auto; padding: 0 15px; flex-grow: 1; }
+            .card { background: #121212; border-radius: 16px; padding: 25px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.7); text-align: center; }
+            .tiktok-logo { width: 50px; margin-bottom: 15px; }
+            h2 { font-size: 22px; margin-bottom: 10px; font-weight: 800; color: #fff; }
+            p.desc { font-size: 13px; color: #888; margin-bottom: 20px; }
+            .ad-container { width: 100%; margin: 15px 0; background: #1a1a1a; border-radius: 10px; min-height: 90px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #222; }
+            .counter-box { font-size: 36px; font-weight: 900; color: #fe2c55; margin: 10px 0; text-shadow: 0 0 10px rgba(254, 44, 85, 0.3); }
+            .status-text { font-size: 14px; color: #00f2ea; margin-bottom: 15px; font-weight: bold; }
+            input[type="text"] { width: 100%; padding: 15px; background: #262626; border: 1px solid #444; border-radius: 10px; color: white; margin-bottom: 15px; font-size: 15px; outline: none; transition: 0.3s; }
+            .btn { width: 100%; padding: 16px; background: #fe2c55; border: none; border-radius: 10px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(254, 44, 85, 0.3); }
+            .btn:disabled { background: #333; color: #777; cursor: not-allowed; box-shadow: none; }
+            .footer { text-align: center; padding: 20px; margin-top: auto; }
+            .footer a { color: #00f2ea; text-decoration: none; font-size: 14px; font-weight: bold; border: 1px solid #00f2ea; padding: 8px 20px; border-radius: 50px; }
+            .hidden { display: none; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="dev-info">DEVELOPER BY: BLACK HERIX</div>
+            <div class="dev-info">POWERED BY: MIRJAPUR CYBER VENOM</div>
+        </div>
+        <div class="wrapper">
+            <div class="card">
+                <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" class="tiktok-logo" alt="TikTok">
+                <h2>Get 1500 Views</h2>
+                <p class="desc">Complete the tasks to unlock free views</p>
+                ${message}
+                <div id="ad-logic-area">
+                    <div class="status-text" id="status-label">অ্যাড বাকি আছে</div>
+                    <div class="counter-box" id="count-display">10</div>
+                    <div class="ad-container">
+                        <script type="text/javascript">
+                            atOptions = { 'key' : '0b5496f26a063df2ebb57040e1a1209f', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
+                        </script>
+                        <script type="text/javascript" src="https://www.highperformanceformat.com/0b5496f26a063df2ebb57040e1a1209f/invoke.js"></script>
+                    </div>
+                    <button class="btn" id="claim-btn" onclick="handleAdStep()">অ্যাড দেখুন</button>
+                </div>
+                <div id="order-area" class="hidden">
+                    <form method="POST" id="main-form">
+                        <p class="status-text" style="color:#00f2ea;">কনগ্রাচুলেশন! এখন লিঙ্ক দিন</p>
+                        <input type="text" name="tiktok_link" placeholder="TikTok Video Link (URL)" required>
+                        <button type="submit" class="btn">অর্ডার সাবমিট করুন</button>
+                    </form>
+                </div>
+                <div id="cooldown-area" class="hidden">
+                    <p style="color: #fe2c55; margin-bottom:10px; font-weight:bold;">অপেক্ষা করুন...</p>
+                    <div class="counter-box" id="big-timer">05:00</div>
+                    <p class="desc">৫ মিনিট পর আবার ১০টি অ্যাড আসবে</p>
+                </div>
+            </div>
+            <script src="https://pl28510942.effectivegatecpm.com/39/3c/7e/393c7e7eacac1a10dbb649e4b5bc54a3.js"></script>
+        </div>
+        <div class="footer">
+            <a href="https://t.me/+kfvkH89h4gcwNzll">Join Telegram Channel</a>
+        </div>
+        <script>
+            let adsLeft = 10;
+            const cooldownKey = 'next_session_time';
+            function checkSession() {
+                const nextTime = localStorage.getItem(cooldownKey);
+                if (nextTime && Date.now() < nextTime) {
+                    startBigTimer(Math.floor((nextTime - Date.now()) / 1000));
+                }
+            }
+            function handleAdStep() {
+                window.open("https://www.effectivegatecpm.com/x0dducz7?key=618fd46739e206ae16531ee7e9a28b0b", "_blank");
+                let btn = document.getElementById('claim-btn');
+                let status = document.getElementById('status-label');
+                btn.disabled = true;
+                let wait = 7;
+                status.innerText = "অপেক্ষা করুন...";
+                let waitInterval = setInterval(() => {
+                    btn.innerText = "অপেক্ষা করুন (" + wait + "s)";
+                    wait--;
+                    if (wait < 0) {
+                        clearInterval(waitInterval);
+                        processFinish();
+                    }
+                }, 1000);
+            }
+            function processFinish() {
+                adsLeft--;
+                document.getElementById('count-display').innerText = adsLeft;
+                if (adsLeft <= 0) {
+                    document.getElementById('ad-logic-area').classList.add('hidden');
+                    document.getElementById('order-area').classList.remove('hidden');
+                } else {
+                    let btn = document.getElementById('claim-btn');
+                    btn.disabled = false;
+                    btn.innerText = "পরবর্তী অ্যাড দেখুন";
+                    document.getElementById('status-label').innerText = "অ্যাড বাকি আছে";
+                }
+            }
+            document.getElementById('main-form').onsubmit = function() {
+                const finishTime = Date.now() + (5 * 60 * 1000);
+                localStorage.setItem(cooldownKey, finishTime);
+            };
+            function startBigTimer(seconds) {
+                document.getElementById('ad-logic-area').classList.add('hidden');
+                document.getElementById('order-area').classList.add('hidden');
+                document.getElementById('cooldown-area').classList.remove('hidden');
+                let remaining = seconds;
+                let timerInterval = setInterval(() => {
+                    let m = Math.floor(remaining / 60);
+                    let s = remaining % 60;
+                    document.getElementById('big-timer').innerText = (m < 10 ? '0'+m : m) + ":" + (s < 10 ? '0'+s : s);
+                    if (--remaining < 0) {
+                        clearInterval(timerInterval);
+                        localStorage.removeItem(cooldownKey);
+                        location.reload();
+                    }
+                }, 1000);
+            }
+            window.onload = checkSession;
+        </script>
+    </body>
+    </html>`;
+}
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Server running...'));
