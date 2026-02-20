@@ -1,39 +1,3 @@
-const express = require('express');
-const axios = require('axios');
-const bodyParser = require('body-parser');
-const path = require('path');
-
-const app = express();
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// কনফিগারেশন - এগুলো Vercel Dashboard থেকে সেট করবে
-const API_KEY = process.env.API_KEY || "Db99b6ad61a43f115ddee06c7d716467";
-const API_URL = "https://smmnea.com/api/v2";
-const SERVICE_ID = "12394"; // আপডেট করা হয়েছে
-const QUANTITY = 1500; // আপডেট করা হয়েছে
-
-app.get('/', (req, res) => {
-    res.send(renderHTML(""));
-});
-
-app.post('/', async (req, res) => {
-    const link = req.body.tiktok_link;
-    let message = "";
-
-    try {
-        const response = await axios.post(API_URL, new URLSearchParams({
-            key: API_KEY,
-            action: 'add',
-            service: SERVICE_ID,
-            link: link,
-            quantity: QUANTITY
-        }));
-
-        if (response.data && response.data.order) {
-            message = `<p style='color: #00f2ea; font-weight:bold;'>অর্ডার সফল হয়েছে! আইডি: ${response.data.order}</p>`;
-        } else {
-            message = `<p style='color: #ff0050; font-weight:bold;'>অর্ডার ব্যর্থ হয়েছে! আবার চেষ্টা করুন।</p>`;
-        }
     } catch (error) {
         message = `<p style='color: #ff0050; font-weight:bold;'>সার্ভার ত্রুটি! পরে চেষ্টা করুন।</p>`;
     }
